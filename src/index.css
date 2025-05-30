@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * グローバルスタイルの思考プロセス:
+ * 1. アクセシビリティ優先: 高コントラスト、フォーカス表示
+ * 2. 読書体験最適化: 目に優しい色彩、適切な行間
+ * 3. レスポンシブ対応: デバイス横断での一貫性
+ */
+
+:root {
+  /* カラー設計思考: 長時間読書に適した配色 */
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+  
+  /* フォント最適化: 読みやすさ重視 */
+  --font-reading: 'Georgia', 'Times New Roman', serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  
+  /* スペーシング: 読書UI専用 */
+  --reading-line-height: 1.6;
+  --reading-max-width: 65ch;
+}
+
+/* ダークモード対応（思考: 夜間読書体験の向上） */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text-primary: #f9fafb;
+    --color-text-secondary: #d1d5db;
+    --color-bg-primary: #111827;
+    --color-bg-secondary: #1f2937;
+  }
+}
+
+/* ベーススタイル: アクセシビリティとパフォーマンス最適化 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px; /* アクセシビリティ: ユーザー設定尊重 */
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* フォーカス管理: キーボードナビゲーション対応 */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 読書エリア専用スタイル */
+.reading-content {
+  font-family: var(--font-reading);
+  line-height: var(--reading-line-height);
+  max-width: var(--reading-max-width);
+  margin: 0 auto;
+}
+
+/* アニメーション設定: パフォーマンス考慮 */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+}
+
+/* ユーティリティクラス */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ローディング状態: ユーザー体験向上 */
+.loading-spinner {
+  @apply animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600;
+}
+
+/* EPUB表示エリア: iframe統合最適化 */
+.epub-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg-primary);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.epub-container iframe {
+  border: none;
+  width: 100%;
+  height: 100%;
+}
+
+/* チャットUI最適化 */
+.chat-message {
+  animation: slideUp 0.3s ease-out;
+}
+
+.chat-input {
+  resize: none;
+  min-height: 44px; /* タッチターゲット最小サイズ */
+}
