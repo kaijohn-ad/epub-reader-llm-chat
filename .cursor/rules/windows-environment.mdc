@@ -1,0 +1,130 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Windows 11 開発環境ルール
+
+## 実行環境
+- **OS**: Windows 11 (10.0.26100)
+- **Shell**: C:\WINDOWS\System32\cmd.exe
+- **Node.js**: v18+ 推奨
+- **パッケージマネージャー**: npm (yarn/pnpmも可)
+
+## Windows固有の注意点
+
+### パス処理
+```typescript
+// ✅ Windows対応のパス処理
+import path from 'path';
+
+// クロスプラットフォーム対応
+const filePath = path.join(process.cwd(), 'public', 'epub-samples');
+const normalizedPath = path.normalize(filePath);
+
+// ❌ 避けるべき: ハードコードされたスラッシュ
+// const badPath = process.cwd() + '/public/epub-samples';
+```
+
+### ファイル操作
+```typescript
+// ✅ WindowsでのEPUBファイル読み込み
+const readEpubFile = async (filePath: string) => {
+  try {
+    // Windowsの長いパス名対応
+    const resolvedPath = path.resolve(filePath);
+    const buffer = await fs.readFile(resolvedPath);
+    return buffer;
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error(`ファイルが見つかりません: ${filePath}`);
+    }
+    throw error;
+  }
+};
+```
+
+### 環境変数設定
+```bash
+# Windows固有の環境変数設定方法
+# PowerShell
+$env:VITE_GROK_API_KEY="your_api_key_here"
+
+# コマンドプロンプト
+set VITE_GROK_API_KEY=your_api_key_here
+
+# .env.local ファイル（推奨）
+VITE_GROK_API_KEY=your_api_key_here
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 開発サーバー起動
+```bash
+# Windows環境での開発サーバー起動
+npm run dev
+
+# ポート指定の場合
+npm run dev -- --port 3000
+
+# ネットワーク公開（他デバイスからアクセス）
+npm run dev -- --host 0.0.0.0
+```
+
+### パフォーマンス最適化
+- **ウイルススキャン除外**: `node_modules`フォルダをリアルタイムスキャンから除外
+- **Windows Defender除外**: プロジェクトルートディレクトリを除外
+- **ファイル監視制限**: 大きなプロジェクトでは`chokidar`の設定調整
+
+### Windows固有のトラブルシューティング
+```typescript
+// ✅ Windows特有のエラーハンドリング
+const handleWindowsSpecificErrors = (error: Error) => {
+  if (error.message.includes('ENOTFOUND')) {
+    console.error('DNS解決エラー: インターネット接続を確認してください');
+  }
+  
+  if (error.message.includes('EACCES')) {
+    console.error('アクセス権限エラー: 管理者権限で実行するか、ファイル権限を確認してください');
+  }
+  
+  if (error.message.includes('EMFILE')) {
+    console.error('ファイル監視制限: ulimitの設定を確認してください');
+  }
+  
+  if (error.message.includes('EPERM')) {
+    console.error('操作権限エラー: ウイルススキャンソフトが干渉している可能性があります');
+  }
+};
+```
+
+### VS Code / Cursor設定
+```json
+// .vscode/settings.json (Windows最適化)
+{
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "files.eol": "\n",
+  "git.autocrlf": false,
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
+}
+```
+
+### ビルド・デプロイ
+```bash
+# Windows環境でのビルド
+npm run build
+
+# Vercelデプロイ
+npx vercel --prod
+
+# 環境変数確認
+echo %VITE_GROK_API_KEY%
+```
+
+## セキュリティ考慮事項
+- APIキーの安全な管理（Windows資格情報マネージャー活用可能）
+- ファイアウォール設定（開発サーバーポートの許可）
+- ウイルススキャンソフトとの競合回避

@@ -1,0 +1,118 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# EPUB リーダー & LLM チャットアプリ - プロジェクト概要
+
+## 🔗 関連ルール
+- **Windows環境**: [windows-environment.mdc](mdc:.cursor/rules/windows-environment.mdc) - Windows 11固有の開発環境設定
+- **思考駆動開発**: [claude-4-sonnet-thinking.mdc](mdc:.cursor/rules/claude-4-sonnet-thinking.mdc) - Claude-4-sonnet思考モデル開発ルール
+- **技術スタック**: [tech-stack.mdc](mdc:.cursor/rules/tech-stack.mdc) - React、TypeScript、epub.js、Grok API統合ガイド
+- **品質・テスト**: [quality-standards.mdc](mdc:.cursor/rules/quality-standards.mdc) - コード品質基準とテスト戦略
+- **問題解決**: [problem-solving.mdc](mdc:.cursor/rules/problem-solving.mdc) - Web検索によるベストプラクティス調査
+- **デプロイ・運用**: [deployment-operations.mdc](mdc:.cursor/rules/deployment-operations.mdc) - Vercelデプロイとモニタリング
+
+## プロジェクト目的
+EPUB形式の電子書籍を読みながら、疑問に思った箇所や理解を深めたい内容について、リアルタイムでLLMに質問できる統合型学習支援Webアプリケーション
+
+## 実行環境
+- **OS**: Windows 11 (10.0.26100)
+- **Shell**: C:\WINDOWS\System32\cmd.exe
+- **Node.js**: v18+ 推奨
+
+## 技術スタック
+- **フロントエンド**: React + TypeScript + Vite
+- **スタイリング**: Tailwind CSS  
+- **EPUB処理**: epub.js
+- **データベース**: Supabase
+- **LLM API**: Grok 3 mini Reasoning (high) - xAI
+- **テスト**: Vitest + Testing Library + MSW + Playwright
+- **デプロイ**: Vercel
+
+## 開発手法
+- **Claude-4-sonnet思考モデル駆動開発**
+- **思考駆動開発 (Thinking-Driven Development)**
+- **テスト駆動開発 (Test-Driven Development)**
+
+## フォルダ構造
+参照: [package.json](mdc:package.json) - プロジェクト設定  
+参照: [tsconfig.json](mdc:tsconfig.json) - TypeScript設定  
+参照: [vite.config.ts](mdc:vite.config.ts) - Vite設定
+
+```
+epub-reader/
+├── public/
+│   └── epub-samples/              # サンプルEPUBファイル
+├── src/
+│   ├── components/                # Reactコンポーネント
+│   │   ├── Reader/               # EPUB読書機能
+│   │   ├── Chat/                 # LLMチャット機能
+│   │   ├── Integration/          # テキスト選択→チャット統合
+│   │   ├── UI/                   # 共通UIコンポーネント
+│   │   └── Layout/               # レイアウトコンポーネント
+│   ├── hooks/                    # カスタムフック
+│   ├── lib/                      # 外部ライブラリ統合
+│   │   ├── epub/                 # epub.js統合
+│   │   ├── grok/                 # Grok API統合
+│   │   ├── supabase/             # Supabase統合
+│   │   └── utils/                # ユーティリティ関数
+│   ├── stores/                   # 状態管理（Zustand）
+│   ├── types/                    # TypeScript型定義
+│   ├── styles/                   # グローバルスタイル
+│   └── test/                     # テスト設定・モック
+├── tests/                        # テストファイル
+├── docs/                         # ドキュメント
+└── .cursor/                      # Cursor設定・ルール
+    └── rules/                    # このルールファイル群
+```
+
+## 主要機能
+1. **EPUBリーダー機能**
+   - ファイル読み込み・表示
+   - ページナビゲーション
+   - テキスト選択・ハイライト
+   - ブックマーク
+
+2. **LLMチャット機能**
+   - Grok APIとのリアルタイム対話
+   - ストリーミングレスポンス
+   - チャット履歴管理
+
+3. **統合機能**
+   - 選択テキスト→チャット送信
+   - コンテキスト付き質問生成
+   - 読書データ分析
+
+## 開発環境セットアップ
+```bash
+# Windows環境での依存関係インストール
+npm install
+
+# 開発サーバー起動
+npm run dev
+
+# 型チェック
+npm run type-check
+
+# テスト実行
+npm run test
+
+# ビルド
+npm run build
+```
+
+## ターゲット環境
+- **PC**: Windows, macOS, Linux (Chrome, Firefox, Safari)
+- **タブレット**: iPad (Safari, Chrome)
+- **個人利用**: 限定公開での単一ユーザー運用
+
+## 品質目標
+- **テストカバレッジ**: 95%以上
+- **パフォーマンス**: Core Web Vitals 90点以上
+- **アクセシビリティ**: WCAG 2.1 AA準拠
+- **セキュリティ**: API Key安全管理、HTTPS強制
+
+## 開発期間・工数
+- **総期間**: 10日間
+- **人的工数**: 8時間（Claude-4-sonnet思考モデルにより96%自動化）

@@ -1,0 +1,468 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 技術スタック固有ルール
+
+## React + TypeScript 規約
+
+### コンポーネント設計原則
+```typescript
+// ✅ 関数コンポーネント + フック
+interface EpubReaderProps {
+  bookUrl: string;
+  onTextSelect: (text: string, context: SelectionContext) => void;
+}
+
+const EpubReader: React.FC<EpubReaderProps> = ({ bookUrl, onTextSelect }) => {
+  const { book, isLoading, error } = useEpubLoader(bookUrl);
+  
+  return (
+    <div className="epub-reader" role="document">
+      {/* JSX実装 */}
+    </div>
+  );
+};
+```
+
+### カスタムフック設計
+```typescript
+// ✅ 単一責任のカスタムフック
+/**
+ * EPUB読み込み・管理フック
+ * 
+ * 責任範囲:
+ * - EPUBファイルの読み込み
+ * - 章・ページ管理
+ * - 読書進捗の追跡
+ */
+function useEpubReader(bookUrl: string) {
+  const [book, setBook] = useState<Book | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [progress, setProgress] = useState(0);
+  
+  // 実装...
+  
+  return { book, currentPage, navigate, progress };
+}
+```
+
+### 状態管理戦略
+```typescript
+// ✅ Zustand使用例（軽量で型安全）
+interface AppState {
+  // EPUB状態
+  currentBook: Book | null;
+  readingProgress: number;
+  
+  // チャット状態  
+  chatHistory: Message[];
+  isTyping: boolean;
+  
+  // UI状態
+  sidebarOpen: boolean;
+  theme: 'light' | 'dark';
+}
+```
+
+## ファイル命名規約
+
+### コンポーネントファイル
+```typescript
+// ✅ PascalCase + .tsx
+EpubReader.tsx
+ChatContainer.tsx
+MessageBubble.tsx
+
+// ✅ コンポーネント名とファイル名の一致
+export const EpubReader: React.FC<EpubReaderProps> = () => {
+  // 実装...
+};
+```
+
+### フック・ユーティリティ
+```typescript
+// ✅ camelCase + use prefix (フック)
+useEpubReader.ts
+useChat.ts
+useTextSelection.ts
+
+// ✅ camelCase (ユーティリティ)
+storageUtils.ts
+validationHelpers.ts
+apiClient.ts
+```
+
+### 型定義ファイル
+```typescript
+// ✅ 機能別 + .ts
+epub.ts        // EPUB関連の型
+chat.ts        // チャット関連の型
+database.ts    // DB関連の型
+api.ts         // API関連の型
+```
+
+## インポート・エクスポート規約
+
+### Barrel Exports (index.ts)
+```typescript
+// ✅ src/components/Reader/index.ts
+export { EpubReader } from './EpubReader';
+export { EpubViewer } from './EpubViewer';
+export { TableOfContents } from './TableOfContents';
+export { ReadingProgress } from './ReadingProgress';
+export { TextSelection } from './TextSelection';
+
+// ✅ 型もエクスポート
+export type { EpubReaderProps } from './EpubReader';
+export type { SelectionContext } from './TextSelection';
+```
+
+### インポート順序
+```typescript
+// ✅ インポート順序の標準化
+// 1. React関連
+import React, { useState, useEffect } from 'react';
+
+// 2. 外部ライブラリ
+import { clsx } from 'clsx';
+import ePub from 'epubjs';
+
+// 3. 内部ライブラリ (lib/)
+import { GrokAPIClient } from '@/lib/grok';
+import { supabase } from '@/lib/supabase';
+
+// 4. コンポーネント
+import { Button, Modal } from '@/components/UI';
+import { MessageBubble } from '@/components/Chat';
+
+// 5. フック
+import { useEpubReader, useChat } from '@/hooks';
+
+// 6. 型定義
+import type { EpubReaderProps, ChatMessage } from '@/types';
+
+// 7. スタイル（最後）
+import './EpubReader.css';
+```
+
+### 絶対パス設定
+```typescript
+// ✅ tsconfig.json パス設定
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/components/*": ["src/components/*"],
+      "@/hooks/*": ["src/hooks/*"],
+      "@/lib/*": ["src/lib/*"],
+      "@/types/*": ["src/types/*"],
+      "@/stores/*": ["src/stores/*"]
+    }
+  }
+}
+```
+
+## Tailwind CSS 使用規約
+
+### レスポンシブデザイン（モバイルファースト）
+```typescript
+// ✅ モバイルファースト設計
+<div className="
+  flex flex-col               // モバイル: 縦並び
+  lg:flex-row                 // PC: 横並び
+  gap-4                       // 統一された間隔
+  p-4 lg:p-8                  // レスポンシブ余白
+">
+  <main className="flex-1 min-w-0">     // EPUB表示エリア
+    <EpubViewer />
+  </main>
+  <aside className="w-full lg:w-96">    // チャットエリア
+    <ChatPanel />
+  </aside>
+</div>
+```
+
+### アクセシビリティ対応クラス
+```typescript
+// ✅ アクセシビリティクラス活用
+<button className="
+  focus:ring-2 focus:ring-blue-500     // フォーカス表示
+  focus:outline-none                   // デフォルトアウトライン除去
+  disabled:opacity-50                  // 無効状態の視覚化
+  disabled:cursor-not-allowed          // カーソル表示
+  transition-colors duration-200       // スムーズな状態変化
+">
+```
+
+## epub.js 統合ガイド
+
+### 基本セットアップ
+```typescript
+import ePub from 'epubjs';
+
+/**
+ * EPUB初期化の思考プロセス:
+ * 1. レンダリング設定の最適化
+ * 2. 進捗追跡の実装
+ * 3. エラーハンドリングの包括的対応
+ */
+class EpubManager {
+  private book: ePub.Book;
+  private rendition: ePub.Rendition;
+  
+  async loadBook(bookData: ArrayBuffer) {
+    this.book = ePub(bookData);
+    this.rendition = this.book.renderTo('epub-container', {
+      width: '100%',
+      height: '100%',
+      spread: 'none'  // シンプルなページ表示
+    });
+    
+    // イベントリスナー設定
+    this.setupEventListeners();
+  }
+  
+  private setupEventListeners() {
+    // テキスト選択イベント
+    this.rendition.on('selected', this.handleTextSelection);
+    
+    // ページ変更イベント
+    this.rendition.on('relocated', this.handlePageChange);
+  }
+}
+```
+
+### テキスト選択の実装
+```typescript
+/**
+ * テキスト選択の高度な処理
+ * 
+ * 課題:
+ * 1. iframe内での選択検出
+ * 2. コンテキスト情報の取得
+ * 3. 選択範囲の永続化
+ */
+private handleTextSelection = (cfiRange: string, contents: any) => {
+  const selectedText = contents.window.getSelection()?.toString();
+  if (!selectedText) return;
+  
+  const context = this.extractContext(cfiRange, contents);
+  this.onTextSelect(selectedText, context);
+};
+
+private extractContext(cfiRange: string, contents: any): SelectionContext {
+  // CFI（Canonical Fragment Identifier）から位置情報抽出
+  const range = this.book.getRange(cfiRange);
+  
+  return {
+    selectedText: range.toString(),
+    beforeContext: this.getBeforeContext(range),
+    afterContext: this.getAfterContext(range),
+    chapterTitle: this.getCurrentChapterTitle(),
+    pageNumber: this.getCurrentPageNumber(),
+  };
+}
+```
+
+## Grok API 統合
+
+### ストリーミング実装
+```typescript
+/**
+ * Grok API ストリーミング処理
+ * 
+ * 要件:
+ * 1. リアルタイム応答表示
+ * 2. エラー回復機能
+ * 3. レート制限対応
+ */
+export async function* streamGrokResponse(
+  messages: ChatMessage[]
+): AsyncGenerator<string, void, unknown> {
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${import.meta.env.VITE_GROK_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'grok-3-mini-reasoning-high',
+      messages,
+      stream: true,
+      max_tokens: 4000,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Grok API エラー: ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('ストリーム読み込み失敗');
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      const chunk = new TextDecoder().decode(value);
+      const lines = chunk.split('\n').filter(line => line.trim());
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') return;
+          
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices[0]?.delta?.content;
+            if (content) yield content;
+          } catch (e) {
+            console.warn('JSON解析エラー:', e);
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+```
+
+### エラーハンドリング
+```typescript
+// ✅ Grok API エラー処理
+export const handleGrokError = (error: Error) => {
+  if (error.message.includes('401')) {
+    throw new Error('Grok APIキーが無効です。環境変数を確認してください。');
+  }
+  
+  if (error.message.includes('429')) {
+    throw new Error('レート制限に達しました。しばらく待ってから再試行してください。');
+  }
+  
+  if (error.message.includes('503')) {
+    throw new Error('Grok APIサーバーが一時的に利用できません。');
+  }
+  
+  throw new Error(`Grok API エラー: ${error.message}`);
+};
+```
+
+## Supabase 統合規約
+
+### データベース設計
+```sql
+-- チャット履歴テーブル
+CREATE TABLE chat_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  book_title TEXT NOT NULL,
+  book_hash TEXT NOT NULL,      -- EPUB識別用
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- メッセージテーブル
+CREATE TABLE chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content TEXT NOT NULL,
+  context_cfi TEXT,             -- EPUB内位置情報
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ハイライト・ブックマーク
+CREATE TABLE highlights (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  book_hash TEXT NOT NULL,
+  cfi_range TEXT NOT NULL,      -- EPUB CFI範囲
+  selected_text TEXT NOT NULL,
+  color TEXT DEFAULT 'yellow',
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+### TypeScript型定義
+参照: [src/lib/supabase/database.types.ts](mdc:src/lib/supabase/database.types.ts) - データベース型定義
+
+```typescript
+// ✅ Supabaseから自動生成された型を使用
+export interface Database {
+  public: {
+    Tables: {
+      chat_sessions: {
+        Row: {
+          id: string;
+          book_title: string;
+          book_hash: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          book_title: string;
+          book_hash: string;
+        };
+        Update: {
+          book_title?: string;
+          updated_at?: string;
+        };
+      };
+      // ... 他のテーブル
+    };
+  };
+}
+```
+
+## テスト設定
+
+### Vitest設定
+参照: [vitest.config.ts](mdc:vitest.config.ts) - テスト設定
+
+### MSWモック設定
+```typescript
+// src/test/mocks/handlers.ts
+import { rest } from 'msw';
+
+export const handlers = [
+  // Grok API モック
+  rest.post('https://api.x.ai/v1/chat/completions', (req, res, ctx) => {
+    return res(
+      ctx.status(200),
+      ctx.json({
+        choices: [{
+          delta: {
+            content: 'モックレスポンス'
+          }
+        }]
+      })
+    );
+  }),
+
+  // Supabase API モック
+  rest.post('https://*.supabase.co/rest/v1/*', (req, res, ctx) => {
+    return res(ctx.status(200), ctx.json({ data: [] }));
+  }),
+];
+```
+
+## パフォーマンス最適化
+
+### バンドルサイズ最適化
+```typescript
+// ✅ 動的インポートによるコード分割
+const EpubReader = lazy(() => import('@/components/Reader/EpubReader'));
+const ChatPanel = lazy(() => import('@/components/Chat/ChatContainer'));
+
+// ✅ Tree-shaking対応のインポート
+import { debounce } from 'lodash-es'; // ❌ import _ from 'lodash';
+
+// ✅ 外部ライブラリの軽量代替選択
+// 重い: moment.js (67KB) → 軽い: date-fns (13KB)
+import { format, parseISO } from 'date-fns';
+```

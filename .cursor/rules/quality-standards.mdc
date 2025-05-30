@@ -1,0 +1,368 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 品質基準・テスト・パフォーマンス ルール
+
+## コード品質基準
+
+### TypeScript厳格設定
+```json
+// ✅ tsconfig.json 厳格モード
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true
+  }
+}
+```
+
+### ESLint 品質ルール
+```typescript
+// ✅ 必須の品質チェック
+{
+  "rules": {
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/prefer-nullish-coalescing": "error",
+    "@typescript-eslint/prefer-optional-chain": "error",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "error"
+  }
+}
+```
+
+### コード複雑性の制限
+```typescript
+// ❌ 避けるべき: 複雑すぎる関数
+function processEpubData(data: any) {
+  if (data) {
+    if (data.chapters) {
+      for (let chapter of data.chapters) {
+        if (chapter.content) {
+          // 10層以上のネスト...
+        }
+      }
+    }
+  }
+}
+
+// ✅ 推奨: 単一責任・早期リターン
+/**
+ * EPUB章データの処理
+ * 
+ * 思考プロセス:
+ * 1. バリデーション → 早期リターン
+ * 2. データ変換 → 純粋関数
+ * 3. エラーハンドリング → 型安全
+ */
+function processChapterContent(chapter: Chapter): ProcessedChapter {
+  if (!chapter?.content) {
+    throw new Error('章コンテンツが無効です');
+  }
+  
+  return transformContent(chapter.content);
+}
+```
+
+## テスト品質基準
+
+### テストカバレッジ要件
+- **最小カバレッジ**: 95%
+- **重要関数**: 100%カバレッジ必須
+- **エッジケース**: 境界値テスト必須
+
+### テストピラミッド構成
+```typescript
+/**
+ * テスト構成比率（思考に基づく最適化）
+ * 
+ * 単体テスト (70%): 個別関数・コンポーネント
+ * 統合テスト (20%): コンポーネント間連携
+ * E2Eテスト (10%): ユーザージャーニー
+ */
+
+// ✅ 単体テスト例
+describe('useEpubReader', () => {
+  it('EPUB読み込み時に進捗を正しく更新する', async () => {
+    const { result } = renderHook(() => useEpubReader());
+    
+    await act(async () => {
+      await result.current.loadBook(mockEpubData);
+    });
+    
+    expect(result.current.progress).toBeGreaterThan(0);
+    expect(result.current.isLoading).toBe(false);
+  });
+  
+  it('無効なEPUBファイル時にエラーを発生させる', async () => {
+    const { result } = renderHook(() => useEpubReader());
+    
+    await expect(
+      result.current.loadBook(invalidEpubData)
+    ).rejects.toThrow('Invalid EPUB format');
+  });
+});
+```
+
+### モック戦略
+```typescript
+// ✅ 戦略的なモック使用
+/**
+ * モック判断基準:
+ * 1. 外部API → 必須モック（安定性・速度）
+ * 2. ファイル操作 → モック推奨
+ * 3. 内部ロジック → 実装テスト（統合重視）
+ */
+
+// Grok API モック
+vi.mock('@/lib/grok/GrokAPIClient', () => ({
+  GrokAPIClient: {
+    streamResponse: vi.fn().mockImplementation(async function* () {
+      yield 'モック';
+      yield 'レスポンス';
+    }),
+  },
+}));
+
+// Supabase モック  
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn().mockResolvedValue({ data: mockData }),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+    })),
+  },
+}));
+```
+
+## パフォーマンス基準
+
+### Core Web Vitals 目標
+```typescript
+/**
+ * パフォーマンス目標値
+ * 
+ * LCP (Largest Contentful Paint): < 2.5秒
+ * FID (First Input Delay): < 100ms  
+ * CLS (Cumulative Layout Shift): < 0.1
+ * 
+ * 測定方法: Lighthouse CI + Real User Monitoring
+ */
+
+// ✅ パフォーマンス監視の実装
+const performanceObserver = new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    if (entry.entryType === 'largest-contentful-paint') {
+      console.log('LCP:', entry.startTime);
+      // 分析・改善のためのログ記録
+    }
+  }
+});
+
+performanceObserver.observe({ entryTypes: ['largest-contentful-paint'] });
+```
+
+### メモリ効率化
+```typescript
+// ✅ メモリリーク防止
+useEffect(() => {
+  const controller = new AbortController();
+  
+  // API呼び出し時のクリーンアップ
+  fetchEpubData(controller.signal)
+    .then(setEpubData)
+    .catch(handleError);
+  
+  return () => {
+    controller.abort(); // 必須: リクエストキャンセル
+  };
+}, []);
+
+// ✅ 大容量データの仮想化
+const VirtualizedChatHistory = () => {
+  const { data: messages } = useChatHistory();
+  
+  return (
+    <FixedSizeList
+      height={600}
+      itemCount={messages.length}
+      itemSize={80}
+      overscanCount={5} // パフォーマンス最適化
+    >
+      {({ index, style }) => (
+        <div style={style}>
+          <MessageBubble message={messages[index]} />
+        </div>
+      )}
+    </FixedSizeList>
+  );
+};
+```
+
+### バンドルサイズ最適化
+```typescript
+// ✅ 動的インポートによるコード分割
+const EpubReader = lazy(() => import('@/components/Reader/EpubReader'));
+const ChatPanel = lazy(() => import('@/components/Chat/ChatContainer'));
+
+// ✅ Tree-shaking対応のインポート
+import { debounce } from 'lodash-es'; // ❌ import _ from 'lodash';
+
+// ✅ 外部ライブラリの軽量代替
+// 重い: moment.js (67KB)
+// 軽い: date-fns (13KB)
+import { format, parseISO } from 'date-fns';
+```
+
+## アクセシビリティ基準
+
+### WCAG 2.1 AA 準拠
+```typescript
+// ✅ セマンティックHTML + ARIA
+<main role="main" aria-label="EPUB読書エリア">
+  <section aria-label="書籍表示">
+    <div 
+      ref={epubContainerRef}
+      role="document"
+      aria-live="polite"           // 内容変更の通知
+      aria-label={currentChapter}
+      tabIndex={0}                 // キーボードフォーカス可能
+      onKeyDown={handleKeyNavigation}
+    >
+      {/* EPUB内容 */}
+    </div>
+  </section>
+  
+  <aside role="complementary" aria-label="AIチャット">
+    <div aria-live="polite" aria-atomic="true">
+      {/* チャット内容 */}
+    </div>
+  </aside>
+</main>
+```
+
+### キーボードナビゲーション
+```typescript
+// ✅ 完全なキーボード操作対応
+const KeyboardNavigation = {
+  'ArrowLeft': () => navigatePage(-1),
+  'ArrowRight': () => navigatePage(1),
+  'Home': () => navigateToChapter(0),
+  'End': () => navigateToChapter(-1),
+  'Enter': () => openTextSelectionMenu(),
+  'Escape': () => closeModals(),
+  'Tab': () => focusNextElement(),
+  'Shift+Tab': () => focusPreviousElement(),
+};
+
+const handleKeyDown = (event: KeyboardEvent) => {
+  const handler = KeyboardNavigation[event.key];
+  if (handler) {
+    event.preventDefault();
+    handler();
+  }
+};
+```
+
+### カラーコントラスト・読みやすさ
+```css
+/* ✅ WCAG AA準拠のカラーパレット */
+:root {
+  /* 文字色: コントラスト比 4.5:1 以上 */
+  --text-primary: #1a1a1a;        /* 背景白での比率: 12.6:1 */
+  --text-secondary: #4a4a4a;      /* 背景白での比率: 6.4:1 */
+  
+  /* 背景色 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  
+  /* アクセント色: フォーカス・選択状態 */
+  --accent-primary: #0066cc;       /* コントラスト比: 5.9:1 */
+  --accent-secondary: #004499;     /* コントラスト比: 8.5:1 */
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #e1e1e1;
+    --text-secondary: #b1b1b1;
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+  }
+}
+```
+
+## セキュリティ基準
+
+### API キー管理
+```typescript
+// ✅ 環境変数による安全な管理
+const GROK_API_KEY = import.meta.env.VITE_GROK_API_KEY;
+
+if (!GROK_API_KEY) {
+  throw new Error(
+    '環境変数 VITE_GROK_API_KEY が設定されていません。' +
+    '.env.local ファイルを確認してください。'
+  );
+}
+
+// ✅ プロダクション環境でのキー検証
+const validateApiKey = (key: string): boolean => {
+  return key.startsWith('xai-') && key.length >= 32;
+};
+```
+
+### 入力値検証
+```typescript
+// ✅ Zod による型安全な検証
+import { z } from 'zod';
+
+const ChatMessageSchema = z.object({
+  content: z.string()
+    .min(1, 'メッセージは必須です')
+    .max(4000, 'メッセージは4000文字以内で入力してください')
+    .regex(/^[^\x00-\x08\x0E-\x1F\x7F]*$/, 'Invalid characters'),
+  
+  context: z.object({
+    selectedText: z.string().max(2000),
+    chapterTitle: z.string().max(200),
+    pageNumber: z.number().int().positive(),
+  }).optional(),
+});
+
+// 使用例
+const validateChatMessage = (input: unknown) => {
+  try {
+    return ChatMessageSchema.parse(input);
+  } catch (error) {
+    throw new Error(`入力値検証エラー: ${error.message}`);
+  }
+};
+```
+
+### XSS 防止
+```typescript
+// ✅ DOMPurify による安全なHTML表示
+import DOMPurify from 'dompurify';
+
+const SafeEpubContent = ({ htmlContent }: { htmlContent: string }) => {
+  const sanitizedHtml = DOMPurify.sanitize(htmlContent, {
+    ALLOWED_TAGS: ['p', 'div', 'span', 'h1', 'h2', 'h3', 'strong', 'em'],
+    ALLOWED_ATTR: ['class', 'id'],
+  });
+  
+  return (
+    <div 
+      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+      // セキュリティ考慮: 限定的なHTMLのみ許可
+    />
+  );
+};
+```
